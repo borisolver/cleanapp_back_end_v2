@@ -154,8 +154,16 @@ func (e *EmailSender) sendOneEmailWithAnalysis(recipient string, reportImage, ma
 
 	// Create subject with analysis title
 	subject := "CleanApp Report"
+	isDigital := analysis != nil && analysis.Classification == "digital"
+	if isDigital {
+		subject = "CleanApp alert: major new issue reported for your brand"
+	}
 	if analysis.Title != "" {
-		subject = fmt.Sprintf("CleanApp Report: %s", analysis.Title)
+		if isDigital {
+			subject = fmt.Sprintf("CleanApp alert: major new issue — %s", analysis.Title)
+		} else {
+			subject = fmt.Sprintf("CleanApp Report: %s", analysis.Title)
+		}
 	}
 
 	to := mail.NewEmail(recipient, recipient)
@@ -279,7 +287,49 @@ func (e *EmailSender) getEmailHtml(recipient string, hasReport, hasMap bool) str
 
 // getEmailTextWithAnalysis returns the plain text content for emails with analysis data
 func (e *EmailSender) getEmailTextWithAnalysis(recipient string, analysis *models.ReportAnalysis, hasReport, hasMap bool) string {
-	var content string
+	if analysis.Classification == "digital" {
+		digitalSubject := "CleanApp alert: major new issue reported for your brand"
+		preheader := "Someone just submitted a brand-related digital report with photos."
+
+		heroReport := ""
+		if hasReport {
+			heroReport = "\n- Hero: photo of report included."
+		}
+
+		heroLocation := ""
+		if hasMap {
+			heroLocation = "\n- Hero: photo of location included."
+		}
+
+		return fmt.Sprintf(`%s
+Preheader: %s
+
+Someone just submitted a new digital report mentioning your brand.
+CleanApp AI analyzed this issue to highlight potential legal and risk ranges connected to your brand presence.%s%s
+
+AI analysis summary:
+- Title: %s
+- Description: %s
+- Type: Digital Issue
+
+Open the Brand Dashboard to see the AI rationale, mapped areas, and supporting media:
+%s
+
+To unsubscribe from these emails, please visit: %s?email=%s
+You can also reply to this email with "UNSUBSCRIBE" in the subject line.
+
+Best regards,
+The CleanApp Team`,
+			digitalSubject,
+			preheader,
+			heroReport,
+			heroLocation,
+			analysis.Title,
+			analysis.Description,
+			e.config.BrandDashboardURL,
+			e.config.OptOutURL,
+			recipient)
+	}
 
 	attachments := ""
 	if hasReport || hasMap {
@@ -292,30 +342,8 @@ func (e *EmailSender) getEmailTextWithAnalysis(recipient string, analysis *model
 		}
 		attachments += "- AI analysis results\n"
 	}
-	if analysis.Classification == "digital" {
-		content = fmt.Sprintf(`Hello,
 
-You have received a new CleanApp digital issue report with analysis.
-
-REPORT ANALYSIS:
-Title: %s
-Description: %s
-Type: Digital Issue
-%s
-Note: This is a digital issue report. Physical metrics (litter/hazard probability) are not applicable.
-
-To unsubscribe from these emails, please visit: %s?email=%s
-You can also reply to this email with "UNSUBSCRIBE" in the subject line.
-
-Best regards,
-The CleanApp Team`,
-			analysis.Title,
-			analysis.Description,
-			attachments,
-			e.config.OptOutURL,
-			recipient)
-	} else {
-		content = fmt.Sprintf(`Hello,
+	return fmt.Sprintf(`Hello,
 
 You have received a new CleanApp report with analysis.
 
@@ -334,28 +362,115 @@ You can also reply to this email with "UNSUBSCRIBE" in the subject line.
 
 Best regards,
 The CleanApp Team`,
-			analysis.Title,
-			analysis.Description,
-			analysis.LitterProbability*100,
-			analysis.HazardProbability*100,
-			analysis.SeverityLevel,
-			attachments,
-			e.config.OptOutURL,
-			recipient)
-	}
-
-	return content
+		analysis.Title,
+		analysis.Description,
+		analysis.LitterProbability*100,
+		analysis.HazardProbability*100,
+		analysis.SeverityLevel,
+		attachments,
+		e.config.OptOutURL,
+		recipient)
 }
 
 // getEmailHtmlWithAnalysis returns the HTML content for emails with analysis data
 func (e *EmailSender) getEmailHtmlWithAnalysis(recipient string, analysis *models.ReportAnalysis, hasReport, hasMap bool) string {
+	isDigital := analysis.Classification == "digital"
+
+	if isDigital {
+		subjectLine := "CleanApp alert: major new issue reported for your brand"
+		preheader := "Someone just submitted a brand-related digital report. Review the AI analysis and risk ranges."
+
+		reportHero := ""
+		if hasReport {
+			reportHero = fmt.Sprintf(`
+            <div class="hero-card">
+                <div class="hero-label">Photo of report</div>
+                <img src="cid:%s" alt="Report Image" />
+            </div>`, reportImgCid)
+		}
+
+		locationHero := ""
+		if hasMap {
+			locationHero = fmt.Sprintf(`
+            <div class="hero-card">
+                <div class="hero-label">Photo of location</div>
+                <img src="cid:%s" alt="Location Map" />
+            </div>`, mapImgCid)
+		}
+
+		heroImages := ""
+		if reportHero != "" || locationHero != "" {
+			heroImages = fmt.Sprintf(`
+        <div class="hero-grid">%s%s
+        </div>`, reportHero, locationHero)
+		}
+
+		return fmt.Sprintf(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>%s</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937; background: #f7f7f8; margin: 0; padding: 0; }
+        .preheader { display: none; visibility: hidden; opacity: 0; height: 0; width: 0; overflow: hidden; }
+        .container { max-width: 720px; margin: 0 auto; padding: 24px; background: #ffffff; }
+        .hero { background: linear-gradient(135deg, #0f766e, #14b8a6); color: #ffffff; padding: 28px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+        .eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; font-size: 12px; margin: 0 0 6px 0; opacity: 0.85; }
+        h1 { margin: 0 0 10px 0; font-size: 26px; }
+        .subhead { margin: 0 0 12px 0; font-size: 16px; opacity: 0.95; }
+        .lede { margin: 0 0 18px 0; font-size: 15px; }
+        .cta { display: inline-block; background: #ffffff; color: #0f172a; padding: 12px 18px; border-radius: 10px; text-decoration: none; font-weight: 700; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+        .card { margin-top: 24px; padding: 18px; border: 1px solid #e5e7eb; border-radius: 12px; background: #f8fafc; }
+        .card h3 { margin-top: 0; color: #0f172a; }
+        .card p { margin: 6px 0; }
+        .card .note { margin-top: 12px; color: #475569; }
+        .hero-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 18px; }
+        .hero-card { background: #0b766c0d; border: 1px solid #d1fae5; border-radius: 12px; padding: 12px; text-align: center; }
+        .hero-label { font-weight: 700; color: #0f766e; margin-bottom: 10px; }
+        .hero-card img { max-width: 100%%; border-radius: 10px; }
+        .footer { margin-top: 24px; font-size: 13px; color: #6b7280; text-align: left; }
+        .footer a { color: #0ea5e9; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="preheader">%s</div>
+    <div class="container">
+        <div class="hero">
+            <p class="eyebrow">CleanApp alert</p>
+            <h1>Major new issue reported for your brand</h1>
+            <p class="subhead">Someone just submitted a brand-related digital report.</p>
+            <p class="lede">CleanApp AI analyzed this issue to highlight potential legal and risk ranges connected to your brand presence.</p>
+            <a class="cta" href="%s">Open brand dashboard</a>
+        </div>
+
+        <div class="card">
+            <h3>AI analysis summary</h3>
+            <p><strong>Title:</strong> %s</p>
+            <p><strong>Description:</strong> %s</p>
+            <p><strong>Type:</strong> Digital Issue</p>
+            <p class="note">Review the dashboard to see the AI rationale, mapped legal/risk ranges, and supporting media.</p>
+        </div>%s
+
+        <div class="footer">
+            <p>To unsubscribe from these emails, please <a href="%s?email=%s">click here</a>.</p>
+        </div>
+    </div>
+</body>
+</html>`,
+			subjectLine,
+			preheader,
+			e.config.BrandDashboardURL,
+			analysis.Title,
+			analysis.Description,
+			heroImages,
+			e.config.OptOutURL,
+			recipient)
+	}
+
 	// Calculate gauge colors based on values
 	litterColor := e.getGaugeColor(analysis.LitterProbability)
 	hazardColor := e.getGaugeColor(analysis.HazardProbability)
 	severityColor := e.getSeverityGaugeColor(analysis.SeverityLevel)
-
-	// Determine if this is a digital report
-	isDigital := analysis.Classification == "digital"
 
 	imagesSection := ""
 	if hasReport {
@@ -403,21 +518,21 @@ func (e *EmailSender) getEmailHtmlWithAnalysis(recipient string, analysis *model
         <h2>CleanApp Report Analysis</h2>
         <p>A new report has been analyzed and requires your attention.</p>
     </div>
-    
+
     <div class="analysis-section">
         <h3>Report Details</h3>
         <p><strong>Title:</strong> %s</p>
         <p><strong>Description:</strong> %s</p>
         <p><strong>Type:</strong> %s</p>
     </div>
-    
+
     %s
-    
+
     <div class="images">%s
     </div>
-    
+
     <p><em>Best regards,<br>The CleanApp Team</em></p>
-    
+
     <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 0.9em; color: #666;">
         <p>To unsubscribe from these emails, please <a href="%s?email=%s" style="color: #007bff; text-decoration: none;">click here</a></p>
     </div>

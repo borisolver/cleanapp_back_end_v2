@@ -24,6 +24,9 @@ type Config struct {
 	OptOutURL    string
 	PollInterval string
 	HTTPPort     string
+
+	// Brand dashboard configuration
+	BrandDashboardURL string
 }
 
 // Load loads configuration from environment variables and flags
@@ -46,6 +49,7 @@ func Load() *Config {
 	cfg.OptOutURL = getEnv("OPT_OUT_URL", "http://localhost:8080/opt-out")
 	cfg.PollInterval = getEnv("POLL_INTERVAL", "10s")
 	cfg.HTTPPort = getEnv("HTTP_PORT", "8080")
+	cfg.BrandDashboardURL = getEnv("BRAND_DASHBOARD_URL", "https://dashboard.cleanapp.io/brand")
 
 	return cfg
 }
