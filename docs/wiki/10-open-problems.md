@@ -102,6 +102,28 @@ their coverage and event windows before treating a run as a baseline.
 | 6 | Audit a bounded sample of photo comparison closures against comparable, dated rechecks. | Page 07; confidence and cost of independent condition checks |
 | 7 | The share of first-hand records that are repeats, on a larger sample than Anthropic's 120. | page 06 |
 
+### Treg People API for reports with no clear recipient
+
+**Status: plan (2026-11-25).** When CleanApp knows which organization owns an
+issue but its official channels yield no actionable route, try Treg to find a
+work contact for the relevant role. For example, a broken lift at a station
+may belong to the transit operator, but the useful contact is the team that
+maintains lifts at that station. Treg advertises $0.07 per full-profile search.
+[Announcement](https://x.com/treg_ai/status/2125546075855741424) · [Product and pricing](https://treg.to/people-search)
+
+**Proposed test.** A routing reviewer would replay 50 unresolved physical and
+digital reports against the existing [contact discovery process](../case-contact-discovery-2026-03-11.md).
+Give Treg only the organization, role and location or product needed for the
+lookup. Count a new route only when an official source corroborates the
+person’s current remit and a professional contact channel. Exclude personal
+emails and mobile numbers. The retrospective test requires no outreach.
+
+Record additional verified routes out of 50, wrong-team matches, and lookup
+cost per additional verified route. Fifty full-profile searches at the
+advertised price would cost $3.50 before review time. If a later notice pilot
+is approved, measure how often the responsible team acknowledges the specific
+issue. A deliverable address alone leaves that question open. Results pending.
+
 ## D. A first test after strategy review
 
 Keep new case studies and outreach deferred during strategy review. The
